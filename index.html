@@ -9,22 +9,29 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gradient-to-r from-blue-100 to-purple-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-8 text-center text-blue-600">Student Q&A Platform</h1>
+        <h1 class="text-4xl font-bold mb-8 text-center text-blue-600 shadow-text">Student Q&A Platform</h1>
         
-        <div id="userSection" class="hidden">
-            <form id="questionForm" class="mb-8">
-                <textarea id="questionInput" class="w-full p-2 border rounded-md" rows="4" placeholder="Ask your question here..."></textarea>
-                <button type="submit" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Submit Question</button>
+        <div id="userSection" class="hidden space-y-8">
+            <form id="questionForm" class="bg-white p-6 rounded-lg shadow-md">
+                <textarea id="questionInput" class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="4" placeholder="Ask your question here..."></textarea>
+                <button type="submit" class="mt-4 bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition duration-300 ease-in-out transform hover:scale-105">Submit Question</button>
             </form>
-            <div id="timer" class="text-xl font-semibold mb-4"></div>
-            <div id="answer" class="bg-white p-4 rounded-md shadow-md"></div>
+            <div id="timer" class="text-xl font-semibold text-center text-blue-700"></div>
+            <div id="answer" class="bg-white p-6 rounded-lg shadow-md"></div>
+            <div id="userQuestions" class="space-y-4"></div>
         </div>
         
-        <div id="adminSection" class="hidden">
-            <h2 class="text-2xl font-semibold mb-4">Pending Questions</h2>
-            <ul id="pendingQuestions" class="space-y-4"></ul>
+        <div id="adminSection" class="hidden space-y-8">
+            <div>
+                <h2 class="text-2xl font-semibold mb-4 text-blue-700">Pending Questions</h2>
+                <ul id="pendingQuestions" class="space-y-4"></ul>
+            </div>
+            <div>
+                <h2 class="text-2xl font-semibold mb-4 text-green-700">Answered Questions</h2>
+                <ul id="answeredQuestions" class="space-y-4"></ul>
+            </div>
         </div>
     </div>
 
