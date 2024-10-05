@@ -28,8 +28,6 @@ if (userType === "user") {
 
 // User section
 const questionForm = document.getElementById("questionForm");
-const timerElement = document.getElementById("timer");
-const answerElement = document.getElementById("answer");
 const userQuestionsElement = document.getElementById("userQuestions");
 
 questionForm.addEventListener("submit", async (e) => {
@@ -47,26 +45,92 @@ questionForm.addEventListener("submit", async (e) => {
   const userQuestions = JSON.parse(
     localStorage.getItem("userQuestions") || "[]"
   );
-  userQuestions.push({ id: docRef.id, question, answered: false });
+  const newQuestion = {
+    id: docRef.id,
+    question,
+    answered: false,
+    timeLeft: 120,
+    timerStarted: Date.now(),
+  };
+  userQuestions.push(newQuestion);
   localStorage.setItem("userQuestions", JSON.stringify(userQuestions));
 
   // Clear input and update UI
   document.getElementById("questionInput").value = "";
   loadUserQuestions();
-
-  // Start timer
-  let timeLeft = 120;
-  const timerId = setInterval(() => {
-    timerElement.textContent = `Time remaining: ${timeLeft} seconds`;
-    timeLeft--;
-
-    if (timeLeft < 0) {
-      clearInterval(timerId);
-      timerElement.textContent = "";
-      checkForAnswer(docRef.id, question);
-    }
-  }, 1000);
 });
+
+function loadUserQuestions() {
+  const userQuestions = JSON.parse(
+    localStorage.getItem("userQuestions") || "[]"
+  );
+  userQuestionsElement.innerHTML = "";
+
+  userQuestions.forEach((q) => {
+    const div = document.createElement("div");
+    div.className = "bg-white p-4 rounded-lg shadow-md mb-4";
+    div.innerHTML = `
+        <p class="font-semibold">${q.question}</p>
+        <div class="timer" data-id="${q.id}">${getTimerText(q)}</div>
+        <p class="mt-2 answer" data-id="${q.id}">${
+      q.answered ? `Answer: ${q.answer}` : "Waiting for answer..."
+    }</p>
+      `;
+    userQuestionsElement.appendChild(div);
+
+    if (!q.answered && q.timeLeft > 0) {
+      startTimer(q.id, q.timeLeft, q.timerStarted);
+    }
+  });
+}
+
+function getTimerText(question) {
+  if (question.answered) {
+    return "";
+  }
+  const elapsed = Math.floor((Date.now() - question.timerStarted) / 1000);
+  const remaining = Math.max(0, question.timeLeft - elapsed);
+  return remaining > 0
+    ? `Time remaining: ${remaining} seconds`
+    : "Time's up! Waiting for AI response...";
+}
+
+function startTimer(questionId, initialTimeLeft, timerStarted) {
+  const timerElement = document.querySelector(
+    `.timer[data-id="${questionId}"]`
+  );
+  const answerElement = document.querySelector(
+    `.answer[data-id="${questionId}"]`
+  );
+
+  const updateTimer = () => {
+    const userQuestions = JSON.parse(
+      localStorage.getItem("userQuestions") || "[]"
+    );
+    const question = userQuestions.find((q) => q.id === questionId);
+
+    if (!question || question.answered) {
+      clearInterval(timerId);
+      return;
+    }
+
+    const elapsed = Math.floor((Date.now() - timerStarted) / 1000);
+    const remaining = Math.max(0, initialTimeLeft - elapsed);
+    question.timeLeft = remaining;
+    localStorage.setItem("userQuestions", JSON.stringify(userQuestions));
+
+    if (remaining > 0) {
+      timerElement.textContent = `Time remaining: ${remaining} seconds`;
+    } else {
+      timerElement.textContent = "Time's up! Waiting for AI response...";
+      clearInterval(timerId);
+      checkForAnswer(questionId, question.question);
+    }
+  };
+
+  const timerId = setInterval(updateTimer, 1000);
+  updateTimer();
+}
 
 async function checkForAnswer(questionId, question) {
   // Check if an admin has answered
@@ -74,12 +138,10 @@ async function checkForAnswer(questionId, question) {
 
   if (docSnapshot.exists && docSnapshot.data().answered) {
     updateUserQuestion(questionId, docSnapshot.data().answer);
-    answerElement.textContent = docSnapshot.data().answer;
   } else {
     // If no admin answer, use AI API
     const aiAnswer = await getAIAnswer(question);
     updateUserQuestion(questionId, aiAnswer);
-    answerElement.textContent = aiAnswer;
   }
 }
 
@@ -126,31 +188,12 @@ async function getAIAnswer(question) {
   }
 }
 
-function loadUserQuestions() {
-  const userQuestions = JSON.parse(
-    localStorage.getItem("userQuestions") || "[]"
-  );
-  userQuestionsElement.innerHTML = "";
-
-  userQuestions.forEach((q) => {
-    const div = document.createElement("div");
-    div.className = "bg-white p-4 rounded-lg shadow-md";
-    div.innerHTML = `
-        <p class="font-semibold">${q.question}</p>
-        <p class="mt-2">${
-          q.answered ? `Answer: ${q.answer}` : "Waiting for answer..."
-        }</p>
-      `;
-    userQuestionsElement.appendChild(div);
-  });
-}
-
 function updateUserQuestion(questionId, answer) {
   const userQuestions = JSON.parse(
     localStorage.getItem("userQuestions") || "[]"
   );
   const updatedQuestions = userQuestions.map((q) =>
-    q.id === questionId ? { ...q, answered: true, answer } : q
+    q.id === questionId ? { ...q, answered: true, answer, timeLeft: 0 } : q
   );
   localStorage.setItem("userQuestions", JSON.stringify(updatedQuestions));
   loadUserQuestions();
@@ -166,7 +209,7 @@ function loadPendingQuestions() {
       pendingQuestionsList.innerHTML = "";
       snapshot.forEach((doc) => {
         const li = document.createElement("li");
-        li.className = "bg-white p-4 rounded-lg shadow-md";
+        li.className = "bg-white p-4 rounded-lg shadow-md mb-4";
         li.innerHTML = `
             <p class="font-semibold mb-2">${doc.data().question}</p>
             <textarea class="w-full p-2 border rounded-md mb-2" rows="3" placeholder="Type your answer..."></textarea>
@@ -188,7 +231,7 @@ function loadAnsweredQuestions() {
       answeredQuestionsList.innerHTML = "";
       snapshot.forEach((doc) => {
         const li = document.createElement("li");
-        li.className = "bg-white p-4 rounded-lg shadow-md";
+        li.className = "bg-white p-4 rounded-lg shadow-md mb-4";
         li.innerHTML = `
             <p class="font-semibold mb-2">${doc.data().question}</p>
             <p class="mt-2">Answer: ${doc.data().answer}</p>
@@ -205,3 +248,10 @@ async function submitAnswer(questionId, button) {
     answered: true,
   });
 }
+
+// Load questions on page load
+window.addEventListener("load", () => {
+  if (userType === "user") {
+    loadUserQuestions();
+  }
+});
