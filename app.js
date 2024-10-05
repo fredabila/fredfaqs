@@ -23,6 +23,7 @@ const adminSection = document.getElementById("adminSection");
 const questionForm = document.getElementById("questionForm");
 const userQuestionsElement = document.getElementById("userQuestions");
 
+// Set up the page based on user type
 if (userType === "user") {
   userSection.classList.remove("hidden");
   loadUserQuestions();
@@ -34,7 +35,7 @@ if (userType === "user") {
 
 // User section
 questionForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
+  e.preventDefault(); // Prevent the default form submission
   const questionInput = document.getElementById("questionInput");
   const question = questionInput.value.trim();
 
