@@ -17,47 +17,59 @@ const db = firebase.firestore();
 const urlParams = new URLSearchParams(window.location.search);
 const userType = urlParams.get("type");
 
+// Get DOM elements
+const userSection = document.getElementById("userSection");
+const adminSection = document.getElementById("adminSection");
+const questionForm = document.getElementById("questionForm");
+const userQuestionsElement = document.getElementById("userQuestions");
+
 if (userType === "user") {
-  document.getElementById("userSection").classList.remove("hidden");
+  userSection.classList.remove("hidden");
   loadUserQuestions();
 } else if (userType === "admin") {
-  document.getElementById("adminSection").classList.remove("hidden");
+  adminSection.classList.remove("hidden");
   loadPendingQuestions();
   loadAnsweredQuestions();
 }
 
 // User section
-const questionForm = document.getElementById("questionForm");
-const userQuestionsElement = document.getElementById("userQuestions");
-
 questionForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const question = document.getElementById("questionInput").value;
+  const questionInput = document.getElementById("questionInput");
+  const question = questionInput.value.trim();
 
-  // Store question in Firebase
-  const docRef = await db.collection("questions").add({
-    question: question,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    answered: false,
-  });
+  if (!question) return; // Prevent empty submissions
 
-  // Store question in localStorage
-  const userQuestions = JSON.parse(
-    localStorage.getItem("userQuestions") || "[]"
-  );
-  const newQuestion = {
-    id: docRef.id,
-    question,
-    answered: false,
-    timeLeft: 120,
-    timerStarted: Date.now(),
-  };
-  userQuestions.push(newQuestion);
-  localStorage.setItem("userQuestions", JSON.stringify(userQuestions));
+  try {
+    // Store question in Firebase
+    const docRef = await db.collection("questions").add({
+      question: question,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      answered: false,
+    });
 
-  // Clear input and update UI
-  document.getElementById("questionInput").value = "";
-  loadUserQuestions();
+    // Store question in localStorage
+    const userQuestions = JSON.parse(
+      localStorage.getItem("userQuestions") || "[]"
+    );
+    const newQuestion = {
+      id: docRef.id,
+      question,
+      answered: false,
+      timeLeft: 120,
+      timerStarted: Date.now(),
+    };
+    userQuestions.push(newQuestion);
+    localStorage.setItem("userQuestions", JSON.stringify(userQuestions));
+
+    // Clear input and update UI
+    questionInput.value = "";
+    loadUserQuestions();
+    startTimer(newQuestion.id, newQuestion.timeLeft, newQuestion.timerStarted);
+  } catch (error) {
+    console.error("Error submitting question:", error);
+    alert("There was an error submitting your question. Please try again.");
+  }
 });
 
 function loadUserQuestions() {
@@ -103,6 +115,8 @@ function startTimer(questionId, initialTimeLeft, timerStarted) {
     `.answer[data-id="${questionId}"]`
   );
 
+  if (!timerElement || !answerElement) return;
+
   const updateTimer = () => {
     const userQuestions = JSON.parse(
       localStorage.getItem("userQuestions") || "[]"
@@ -133,15 +147,23 @@ function startTimer(questionId, initialTimeLeft, timerStarted) {
 }
 
 async function checkForAnswer(questionId, question) {
-  // Check if an admin has answered
-  const docSnapshot = await db.collection("questions").doc(questionId).get();
+  try {
+    // Check if an admin has answered
+    const docSnapshot = await db.collection("questions").doc(questionId).get();
 
-  if (docSnapshot.exists && docSnapshot.data().answered) {
-    updateUserQuestion(questionId, docSnapshot.data().answer);
-  } else {
-    // If no admin answer, use AI API
-    const aiAnswer = await getAIAnswer(question);
-    updateUserQuestion(questionId, aiAnswer);
+    if (docSnapshot.exists && docSnapshot.data().answered) {
+      updateUserQuestion(questionId, docSnapshot.data().answer);
+    } else {
+      // If no admin answer, use AI API
+      const aiAnswer = await getAIAnswer(question);
+      updateUserQuestion(questionId, aiAnswer);
+    }
+  } catch (error) {
+    console.error("Error checking for answer:", error);
+    updateUserQuestion(
+      questionId,
+      "Sorry, there was an error retrieving the answer. Please try again later."
+    );
   }
 }
 
@@ -243,10 +265,15 @@ function loadAnsweredQuestions() {
 
 async function submitAnswer(questionId, button) {
   const answerText = button.previousElementSibling.value;
-  await db.collection("questions").doc(questionId).update({
-    answer: answerText,
-    answered: true,
-  });
+  try {
+    await db.collection("questions").doc(questionId).update({
+      answer: answerText,
+      answered: true,
+    });
+  } catch (error) {
+    console.error("Error submitting answer:", error);
+    alert("There was an error submitting your answer. Please try again.");
+  }
 }
 
 // Load questions on page load
