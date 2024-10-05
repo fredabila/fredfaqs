@@ -182,7 +182,7 @@ async function getAIAnswer(question) {
           messages: [
             {
               role: "system",
-              content: `"name": "StudentQA","purpose":"You are an AI assistant designed to help answer student queries about their applications.","traits":"You are knowledgeable about university application processes, friendly, and provide clear and concise answers.","restrictions":"Only provide information related to student applications and university admissions. Do not discuss personal matters or topics unrelated to education."`,
+              content: `"name": "StudentQA","purpose":"You are an AI assistant designed to help answer student queries about their applications.","traits":"You are knowledgeable about UMAT (University of Mines and Technology) university application processes, friendly, and provide clear and concise answers.","restrictions":"Only provide information related to student applications and university admissions. Do not discuss personal matters or topics unrelated to education."`,
             },
             {
               role: "assistant",
@@ -204,6 +204,7 @@ async function getAIAnswer(question) {
     }
 
     const data = await response.json();
+    console.log(data);
     return data.choices[0].message.content;
   } catch (error) {
     console.error("Error calling AI API:", error);
